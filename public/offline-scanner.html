@@ -628,14 +628,58 @@
             processTicketOffline(decodedText);
         }
 
-        // Completely offline ticket processing
+        // Validate ticket ID format
+        function isValidTicketFormat(ticketId) {
+            if (!ticketId || ticketId.trim().length === 0) {
+                return false;
+            }
+            
+            const cleanTicketId = ticketId.trim();
+            
+            // Check for common ticket patterns
+            const ticketPatterns = [
+                /^[A-Za-z\s]+-[A-Za-z0-9]+-\d+$/,  // Name-ID-Number format
+                /^[A-Za-z\s]+\s[A-Za-z\s]+-\d+$/,  // First Last-Number format
+                /^[A-Za-z\s]+-\d{13}$/,            // Name-Timestamp format
+                /^[A-Za-z\s]+-[A-Za-z0-9]{3,}-\d{10,}$/, // Flexible format
+                /^TK[A-Z0-9]{6,}$/,                // Ticket format starting with TK
+                /^TICKET[A-Z0-9]{6,}$/,            // Ticket format starting with TICKET
+            ];
+            
+            const isValidFormat = ticketPatterns.some(pattern => pattern.test(cleanTicketId));
+            const hasLetters = /[A-Za-z]/.test(cleanTicketId);
+            const hasNumbers = /[0-9]/.test(cleanTicketId);
+            const minLength = cleanTicketId.length >= 8;
+            const maxLength = cleanTicketId.length <= 100;
+            
+            // Check if it looks like a common non-ticket QR code
+            const commonNonTicketPatterns = [
+                /^https?:\/\//i, /^www\./i, /^tel:/i, /^mailto:/i,
+                /^WIFI:/i, /^BEGIN:VCARD/i, /^\d{10,15}$/
+            ];
+            
+            const isNotCommonFormat = !commonNonTicketPatterns.some(pattern => pattern.test(cleanTicketId));
+            
+            return isValidFormat && hasLetters && hasNumbers && minLength && maxLength && isNotCommonFormat;
+        }
+
+        // Completely offline ticket processing with validation
         function processTicketOffline(ticketId) {
-            showStatus('scanning', '⚡ Processing Offline...');
+            showStatus('scanning', '⚡ Validating Ticket...');
             updateStats('total');
 
             // Simulate processing delay for UX
             setTimeout(() => {
-                // Basic validation - any scanned code is considered valid
+                // Validate ticket format first
+                if (!isValidTicketFormat(ticketId)) {
+                    showStatus('error', `❌ INVALID TICKET FORMAT`);
+                    updateStats('invalid');
+                    console.log('❌ Invalid QR code:', ticketId);
+                    setTimeout(restartScanning, 2500);
+                    return;
+                }
+                
+                // If validation passes, process the ticket
                 if (ticketId && ticketId.trim().length > 0) {
                     // Extract name from ticket ID (try to parse)
                     let participantName = 'Participant';
@@ -757,7 +801,21 @@
             if (ticketId) {
                 document.getElementById('manualTicketId').value = '';
                 toggleManualInput();
+                
+                // Add validation for manual entry
+                if (!isValidTicketFormat(ticketId)) {
+                    showStatus('error', `❌ INVALID TICKET FORMAT`);
+                    updateStats('total');
+                    updateStats('invalid');
+                    console.log('❌ Invalid manual entry:', ticketId);
+                    setTimeout(hideStatus, 2500);
+                    return;
+                }
+                
                 processTicketOffline(ticketId);
+            } else {
+                showStatus('error', `❌ PLEASE ENTER A TICKET ID`);
+                setTimeout(hideStatus, 2000);
             }
         }
 

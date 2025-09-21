@@ -618,52 +618,118 @@
             }
         }
 
-        // Process ticket offline
+        // Validate ticket ID format
+        function isValidTicketFormat(ticketId) {
+            if (!ticketId || ticketId.trim().length === 0) {
+                return false;
+            }
+            
+            const cleanTicketId = ticketId.trim();
+            
+            // Check for common ticket patterns
+            const ticketPatterns = [
+                /^[A-Za-z\s]+-[A-Za-z0-9]+-\d+$/,  // Name-ID-Number format (e.g., "Sameer-123-1758264601564")
+                /^[A-Za-z\s]+\s[A-Za-z\s]+-\d+$/,  // First Last-Number format (e.g., "Priya Sharma-1758230123731")
+                /^[A-Za-z\s]+-\d{13}$/,            // Name-Timestamp format
+                /^[A-Za-z\s]+-[A-Za-z0-9]{3,}-\d{10,}$/, // Flexible format with name, ID, and long number
+                /^TK[A-Z0-9]{6,}$/,                // Ticket format starting with TK
+                /^TICKET[A-Z0-9]{6,}$/,            // Ticket format starting with TICKET
+                /^[A-Za-z0-9]{8,}-[A-Za-z0-9]{4,}-[A-Za-z0-9]{4,}$/, // UUID-like format
+            ];
+            
+            // Check against any of the patterns
+            const isValidFormat = ticketPatterns.some(pattern => pattern.test(cleanTicketId));
+            
+            // Additional checks for minimum requirements
+            const hasLetters = /[A-Za-z]/.test(cleanTicketId);
+            const hasNumbers = /[0-9]/.test(cleanTicketId);
+            const minLength = cleanTicketId.length >= 8; // Minimum 8 characters
+            const maxLength = cleanTicketId.length <= 100; // Maximum 100 characters
+            
+            // Check if it looks like a common non-ticket QR code
+            const commonNonTicketPatterns = [
+                /^https?:\/\//i,                   // URLs
+                /^www\./i,                         // Websites
+                /^tel:/i,                          // Phone numbers
+                /^mailto:/i,                       // Email addresses
+                /^[A-Z]{2}\d{2}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{4}$/i, // Credit card format
+                /^\d{10,15}$/,                     // Plain phone numbers
+                /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, // Email format
+                /^WIFI:/i,                         // WiFi QR codes
+                /^BEGIN:VCARD/i,                   // vCard format
+            ];
+            
+            const isNotCommonFormat = !commonNonTicketPatterns.some(pattern => pattern.test(cleanTicketId));
+            
+            console.log('🎫 Ticket validation:', {
+                ticketId: cleanTicketId,
+                isValidFormat,
+                hasLetters,
+                hasNumbers,
+                minLength,
+                maxLength,
+                isNotCommonFormat,
+                finalResult: isValidFormat && hasLetters && hasNumbers && minLength && maxLength && isNotCommonFormat
+            });
+            
+            return isValidFormat && hasLetters && hasNumbers && minLength && maxLength && isNotCommonFormat;
+        }
+
+        // Process ticket offline with validation
         function processTicketOffline(ticketId) {
-            showStatus('scanning', '⚡ Processing Offline...');
+            showStatus('scanning', '⚡ Validating Ticket...');
             updateStats('total');
 
             setTimeout(() => {
-                if (ticketId && ticketId.trim().length > 0) {
-                    let participantName = 'Participant';
-                    
-                    if (ticketId.includes('-')) {
-                        const parts = ticketId.split('-');
-                        participantName = parts[0] || 'Participant';
-                    } else if (ticketId.includes(' ')) {
-                        const parts = ticketId.split(' ');
-                        participantName = parts[0] || 'Participant';
-                    } else {
-                        participantName = ticketId.substring(0, Math.min(15, ticketId.length));
-                    }
-                    
-                    participantName = participantName.replace(/[^a-zA-Z\s]/g, '').trim() || 'Valid Ticket';
-                    
-                    showParticipantInfo({
-                        name: participantName,
-                        ticketId: ticketId,
-                        status: 'Scanned ✅',
-                        scanTime: new Date().toLocaleTimeString(),
-                        scanner: `Scanner #${scannerId}`
-                    });
-                    
-                    showStatus('success', `✅ TICKET SCANNED: ${participantName}`);
-                    updateStats('valid');
-                    
-                    setTimeout(() => {
-                        hideParticipantInfo();
-                        hideStatus();
-                        isScanning = false;
-                    }, 3000);
-                } else {
-                    showStatus('error', `❌ INVALID QR CODE`);
+                // First validate if this looks like a ticket
+                if (!isValidTicketFormat(ticketId)) {
+                    showStatus('error', `❌ INVALID TICKET FORMAT`);
                     updateStats('invalid');
+                    
+                    // Show what was scanned for debugging
+                    console.log('❌ Invalid QR code scanned:', ticketId);
+                    
                     setTimeout(() => {
                         hideStatus();
                         isScanning = false;
-                    }, 2000);
+                    }, 2500);
+                    return;
                 }
-            }, 300);
+                
+                // If validation passes, process the ticket
+                let participantName = 'Participant';
+                
+                if (ticketId.includes('-')) {
+                    const parts = ticketId.split('-');
+                    participantName = parts[0] || 'Participant';
+                } else if (ticketId.includes(' ')) {
+                    const parts = ticketId.split(' ');
+                    participantName = parts[0] || 'Participant';
+                } else {
+                    participantName = ticketId.substring(0, Math.min(15, ticketId.length));
+                }
+                
+                participantName = participantName.replace(/[^a-zA-Z\s]/g, '').trim() || 'Valid Ticket';
+                
+                showParticipantInfo({
+                    name: participantName,
+                    ticketId: ticketId,
+                    status: 'Valid Ticket ✅',
+                    scanTime: new Date().toLocaleTimeString(),
+                    scanner: `Scanner #${scannerId}`
+                });
+                
+                showStatus('success', `✅ VALID TICKET: ${participantName}`);
+                updateStats('valid');
+                
+                console.log('✅ Valid ticket processed:', ticketId);
+                
+                setTimeout(() => {
+                    hideParticipantInfo();
+                    hideStatus();
+                    isScanning = false;
+                }, 3000);
+            }, 500);
         }
 
         // Show participant information
@@ -738,7 +804,21 @@
             if (ticketId) {
                 document.getElementById('manualTicketId').value = '';
                 toggleManualInput();
+                
+                // Add validation for manual entry as well
+                if (!isValidTicketFormat(ticketId)) {
+                    showStatus('error', `❌ INVALID TICKET FORMAT`);
+                    updateStats('total');
+                    updateStats('invalid');
+                    console.log('❌ Invalid manual entry:', ticketId);
+                    setTimeout(hideStatus, 2500);
+                    return;
+                }
+                
                 processTicketOffline(ticketId);
+            } else {
+                showStatus('error', `❌ PLEASE ENTER A TICKET ID`);
+                setTimeout(hideStatus, 2000);
             }
         }
 
