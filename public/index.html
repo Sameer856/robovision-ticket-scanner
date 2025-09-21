@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎟️ Thaakra Thaalam '25 - Ticket Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .scanner-section {
+            padding: 30px 20px;
+        }
+
+        .scanner-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-container #reader {
+            position: relative;
+        }
+
+        #reader {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .manual-input {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .manual-input h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .participant-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 8px;
+        }
+
+        .participant-info h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .participant-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-valid {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-used {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-invalid {
+            background: #6c757d;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            padding: 20px;
+            background: #f8f9fa;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .scanner-overlay.hidden {
+            display: none;
+        }
+
+        .ready-scan-btn {
+            font-size: 18px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .scanning-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 5;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .scanner-section {
+                padding: 20px 15px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 15px; justify-content: center;">
+                <img src="logo.png" alt="Robovision" style="height: 40px; filter: brightness(0) invert(1);" onerror="this.style.display='none'">
+                <div>
+                    <h1>🎟️ Thaakra Thaalam '25</h1>
+                    <p>Ticket Scanner & Verification</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="scanner-section">
+            <div class="scanner-container">
+                <div id="reader"></div>
+                <div id="scannerOverlay" class="scanner-overlay">
+                    <button id="readyToScanBtn" class="btn btn-success ready-scan-btn" onclick="readyToScan()">
+                        📱 Ready to Scan Next Ticket
+                    </button>
+                </div>
+            </div>
+
+            <div class="manual-input">
+                <h3>📝 Manual Ticket ID Entry</h3>
+                <div class="input-group">
+                    <input type="text" id="manualTicketId" placeholder="Enter Ticket ID" maxlength="50">
+                    <button class="btn btn-primary" onclick="verifyManualTicket()">Verify</button>
+                </div>
+            </div>
+
+            <div id="result" class="result"></div>
+
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Verifying ticket...</p>
+            </div>
+        </div>
+
+        <div class="stats">
+            <p>📊 Session Stats: <span id="scannedCount">0</span> scanned | <span id="validCount">0</span> valid | <span id="invalidCount">0</span> invalid</p>
+            <p style="margin-top: 10px; font-size: 12px; opacity: 0.7;">
+                <img src="https://robovision.in/assets/logo-white.png" alt="Robovision" style="height: 16px; filter: brightness(0); vertical-align: middle;" onerror="this.style.display='none'">
+                Made with ❤️ by <strong>Robovision</strong> • Powered by robovision.in
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let html5QrcodeScanner;
+        let stats = {
+            scanned: 0,
+            valid: 0,
+            invalid: 0
+        };
+
+        // Initialize QR Scanner with better settings
+        function startScanner() {
+            const config = {
+                fps: 10,
+                qrbox: { width: 280, height: 280 },
+                aspectRatio: 1.0,
+                disableFlip: false,
+                videoConstraints: {
+                    facingMode: "environment" // Use back camera by default
+                }
+            };
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            
+            // Auto-focus on scanner area
+            setTimeout(() => {
+                const readerElement = document.getElementById('reader');
+                if (readerElement) {
+                    readerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 1000);
+        }
+
+        // Handle successful QR scan
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`QR Code detected: ${decodedText}`);
+            
+            // Stop scanning immediately
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.pause(true);
+            }
+            
+            // Hide scanning indicator
+            hideScanningIndicator();
+            
+            // Play success sound (optional)
+            playBeep();
+            
+            // Verify the ticket
+            verifyTicket(decodedText);
+        }
+        
+        // Play beep sound for successful scan
+        function playBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (e) {
+                // Silent fail if audio not supported
+            }
+        }
+
+        // Handle scan failure
+        function onScanFailure(error) {
+            // Ignore scan failures (they happen frequently)
+        }
+
+        // Verify ticket via API
+        async function verifyTicket(ticketId) {
+            showLoading(true);
+            updateStats('scanned');
+            
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ticketId: ticketId.trim() })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('success', 'Valid Ticket! ✅', result.participant);
+                    updateStats('valid');
+                } else {
+                    showResult('error', result.message || 'Invalid Ticket ❌', result.participant);
+                    updateStats('invalid');
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                showResult('error', 'Network error. Please try again. ⚠️');
+                updateStats('invalid');
+            }
+            
+            showLoading(false);
+        }
+
+        // Check-in participant
+        async function checkInParticipant(ticketId) {
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/checkin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ticketId: ticketId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('success', 'Successfully Checked In! 🎉', result.participant);
+                    
+                    // Auto-restart scanning after successful check-in
+                    setTimeout(() => {
+                        hideResult();
+                        restartScanning();
+                    }, 3000);
+                } else {
+                    showResult('warning', result.message || 'Check-in failed ⚠️', result.participant);
+                    
+                    // Restart scanning after error
+                    setTimeout(() => {
+                        hideResult();
+                        restartScanning();
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Check-in error:', error);
+                showResult('error', 'Check-in error. Please try again. ⚠️');
+                
+                // Restart scanning after error
+                setTimeout(() => {
+                    hideResult();
+                    restartScanning();
+                }, 2000);
+            }
+            
+            showLoading(false);
+        }
+        
+        // Restart scanning function
+        function restartScanning() {
+            showOverlay();
+        }
+        
+        // Hide result function
+        function hideResult() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // Manual ticket verification
+        function verifyManualTicket() {
+            const ticketId = document.getElementById('manualTicketId').value.trim();
+            if (ticketId) {
+                verifyTicket(ticketId);
+                document.getElementById('manualTicketId').value = '';
+            }
+        }
+
+        // Show result
+        function showResult(type, message, participant = null) {
+            const resultDiv = document.getElementById('result');
+            let content = `<h4>${message}</h4>`;
+            
+            if (participant) {
+                content += `
+                    <div class="participant-info">
+                        <h4>👤 Participant Details</h4>
+                        <p><strong>Name:</strong> ${participant.name}</p>
+                        <p><strong>Email:</strong> ${participant.email || 'N/A'}</p>
+                        ${participant.phone ? `<p><strong>Phone:</strong> ${participant.phone}</p>` : ''}
+                        ${participant.status ? `<p><strong>Status:</strong> <span class="status-badge status-${getStatusClass(participant.status)}">${participant.status}</span></p>` : ''}
+                        ${participant.checkedInTime ? `<p><strong>Checked In:</strong> ${participant.checkedInTime}</p>` : ''}
+                        ${participant.ticketId ? `<p><strong>Ticket ID:</strong> ${participant.ticketId}</p>` : ''}
+                    </div>
+                `;
+                
+                // Add check-in button if ticket is valid and not checked in
+                if (type === 'success' && participant.status !== 'Checked In') {
+                    content += `<button class="btn btn-success" onclick="checkInParticipant('${participant.ticketId}')">✅ Check In Participant</button>`;
+                }
+            }
+            
+            resultDiv.innerHTML = content;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 10000);
+        }
+
+        // Get status class for styling
+        function getStatusClass(status) {
+            if (status === 'Ticket Sent') return 'valid';
+            if (status === 'Checked In') return 'used';
+            return 'invalid';
+        }
+
+        // Show/hide loading
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Update stats
+        function updateStats(type) {
+            stats[type]++;
+            document.getElementById('scannedCount').textContent = stats.scanned;
+            document.getElementById('validCount').textContent = stats.valid;
+            document.getElementById('invalidCount').textContent = stats.invalid;
+        }
+
+        // Handle Enter key in manual input
+        document.getElementById('manualTicketId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyManualTicket();
+            }
+        });
+
+        // Ready to scan function
+        function readyToScan() {
+            hideOverlay();
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.resume();
+            }
+            showScanningIndicator();
+        }
+        
+        // Show/hide overlay
+        function showOverlay() {
+            document.getElementById('scannerOverlay').classList.remove('hidden');
+        }
+        
+        function hideOverlay() {
+            document.getElementById('scannerOverlay').classList.add('hidden');
+        }
+        
+        // Show scanning indicator
+        function showScanningIndicator() {
+            let indicator = document.getElementById('scanningIndicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'scanningIndicator';
+                indicator.className = 'scanning-indicator';
+                indicator.textContent = '📱 SCANNING...';
+                document.querySelector('.scanner-container').appendChild(indicator);
+            }
+            indicator.style.display = 'block';
+        }
+        
+        // Hide scanning indicator
+        function hideScanningIndicator() {
+            const indicator = document.getElementById('scanningIndicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+            }
+        }
+        
+        // Initialize scanner and show overlay
+        function initializeScanner() {
+            startScanner();
+            setTimeout(() => {
+                showOverlay();
+            }, 1500);
+        }
+        
+        // Start the scanner when page loads
+        window.addEventListener('load', initializeScanner);
+    </script>
+</body>
+</html>

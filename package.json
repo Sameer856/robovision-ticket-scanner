@@ -1,0 +1,43 @@
+{
+  "name": "robovision-ticket-scanner",
+  "version": "2.0.0",
+  "description": "Ultra-fast ticket verification system for large events - Made by Robovision",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "git add . && git commit -m 'Deploy scanner' && git push origin main"
+  },
+  "keywords": [
+    "ticket-scanner",
+    "qr-code",
+    "event-management",
+    "robovision",
+    "verification",
+    "high-volume",
+    "real-time"
+  ],
+  "author": "Robovision <contact@robovision.in>",
+  "license": "MIT",
+  "homepage": "https://robovision.in",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robovision-in/ticket-scanner.git"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "google-auth-library": "^10.3.0",
+    "googleapis": "^160.0.0",
+    "https": "^1.0.0",
+    "qr-scanner": "^1.4.2"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
