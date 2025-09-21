@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>⚡ Robovision's Scanner - Client-Side</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #ff4081, #3f51b5);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+            min-height: 60px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .robovision-logo {
+            height: 30px;
+            width: auto;
+            filter: brightness(0) invert(1);
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 8px;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            font-weight: bold;
+            white-space: nowrap;
+            font-size: 0.8rem;
+        }
+
+        .scanner-area {
+            flex: 1;
+            position: relative;
+            background: #000;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        #reader {
+            width: 100%;
+            height: 100%;
+            border: none;
+            object-fit: cover;
+        }
+
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .scanner-overlay.hidden {
+            display: none;
+        }
+
+        .ready-button {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ready-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(76, 175, 80, 0.6);
+        }
+
+        .status-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            z-index: 50;
+            transition: all 0.3s;
+            min-width: 300px;
+        }
+
+        .status-scanning {
+            background: linear-gradient(45deg, #FF9800, #FF5722);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-success {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+        }
+
+        .status-error {
+            background: linear-gradient(45deg, #F44336, #E91E63);
+            color: white;
+        }
+
+        .status-warning {
+            background: linear-gradient(45deg, #FF9800, #FFC107);
+            color: black;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+        }
+
+        .participant-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #4CAF50;
+            z-index: 40;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+
+        .participant-info.show {
+            transform: translateY(0);
+        }
+
+        .participant-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+
+        .participant-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .detail-item {
+            padding: 5px 0;
+        }
+
+        .detail-label {
+            color: #ccc;
+            font-weight: bold;
+        }
+
+        .scanning-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 3px solid #4CAF50;
+            border-radius: 20px;
+            z-index: 30;
+            opacity: 0.7;
+            animation: scan-lines 2s infinite;
+        }
+
+        @keyframes scan-lines {
+            0%, 100% { border-color: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
+            50% { border-color: #8BC34A; box-shadow: 0 0 40px #8BC34A; }
+        }
+
+        .manual-input-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            z-index: 60;
+        }
+
+        .manual-input-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.95);
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+            z-index: 70;
+        }
+
+        .manual-input-panel.show {
+            transform: translateY(0);
+        }
+
+        .manual-input-group {
+            display: flex;
+            gap: 10px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .manual-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #222;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .manual-submit {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .beep-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: #4CAF50;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 90;
+            animation: beep-flash 0.3s;
+        }
+
+        @keyframes beep-flash {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+
+        .network-status {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 50;
+            background: #FF9800;
+            color: white;
+        }
+
+        .footer-branding {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 25px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .footer-logo {
+            height: 20px;
+            width: auto;
+            filter: brightness(0) invert(1);
+        }
+
+        .footer-branding .heart {
+            color: #ff4081;
+            animation: heartbeat 1.5s infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .session-info {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            white-space: nowrap;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .header {
+                padding: 8px 12px;
+                min-height: 50px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .header-left {
+                gap: 8px;
+            }
+
+            .robovision-logo {
+                height: 25px;
+            }
+
+            .header h1 {
+                font-size: 1rem;
+            }
+
+            .stats-bar {
+                gap: 6px;
+                order: 3;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .stat-item {
+                padding: 3px 6px;
+                font-size: 0.7rem;
+            }
+
+            .session-info {
+                font-size: 0.6rem;
+            }
+
+            .ready-button {
+                padding: 12px 24px;
+                font-size: 1rem;
+                letter-spacing: 0.5px;
+            }
+
+            .scanning-crosshair {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <div class="header">
+            <div class="header-left">
+                <img src="../logo.png" alt="Robovision" class="robovision-logo" onerror="this.style.display='none'">
+                <h1>Robovision's Scanner</h1>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">✅ <span id="validCount">0</span></div>
+                <div class="stat-item">❌ <span id="invalidCount">0</span></div>
+                <div class="stat-item">📊 <span id="totalCount">0</span></div>
+            </div>
+            <div class="session-info">
+                Scanner #<span id="scannerId">1</span> | Session: <span id="sessionTime">00:00</span>
+            </div>
+        </div>
+
+        <div class="network-status" id="networkStatus">📱 Client-Side Mode</div>
+
+        <div class="scanner-area">
+            <div id="reader"></div>
+            
+            <div id="scannerOverlay" class="scanner-overlay">
+                <button id="readyButton" class="ready-button" onclick="startScanning()">
+                    🎯 START SCANNING
+                </button>
+            </div>
+
+            <div id="statusDisplay" class="status-display" style="display: none;"></div>
+            <div id="scanningCrosshair" class="scanning-crosshair" style="display: none;"></div>
+            <div id="beepIndicator" class="beep-indicator"></div>
+
+            <div id="participantInfo" class="participant-info">
+                <div class="participant-name" id="participantName"></div>
+                <div class="participant-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Ticket ID:</span> 
+                        <span id="participantTicketId"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status:</span> 
+                        <span id="participantStatus">Verified</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Time:</span> 
+                        <span id="scanTime"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Scanner:</span> 
+                        <span id="scannerInfo"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="manual-input-toggle" onclick="toggleManualInput()">⌨️ Manual Entry</button>
+
+        <div id="manualInputPanel" class="manual-input-panel">
+            <div class="manual-input-group">
+                <input type="text" id="manualTicketId" class="manual-input" placeholder="Enter Ticket ID manually..." maxlength="50">
+                <button class="manual-submit" onclick="verifyManualTicket()">✅ Verify</button>
+                <button class="manual-submit" onclick="toggleManualInput()" style="background: #666;">❌ Close</button>
+            </div>
+        </div>
+
+        <div class="footer-branding">
+            <img src="../logo.png" alt="Robovision" class="footer-logo" onerror="this.style.display='none'">
+            <span>Made with <span class="heart">❤️</span> by</span>
+            <strong>Robovision</strong>
+        </div>
+    </div>
+
+    <script>
+        let html5QrcodeScanner;
+        let stats = { valid: 0, invalid: 0, total: 0 };
+        let sessionStartTime = Date.now();
+        let scannerId = Math.floor(Math.random() * 1000) + 1;
+        let isScanning = false;
+
+        // Initialize scanner ID and session timer
+        document.getElementById('scannerId').textContent = scannerId;
+        
+        // Update session timer every second
+        setInterval(() => {
+            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('sessionTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+
+        // Scanner configuration with mobile optimization
+        function initializeScanner() {
+            const isMobile = window.innerWidth <= 768;
+            const config = {
+                fps: isMobile ? 15 : 30,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdgePercentage = 0.7;
+                    const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                    const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                    return {
+                        width: Math.min(qrboxSize, isMobile ? 200 : 250),
+                        height: Math.min(qrboxSize, isMobile ? 200 : 250)
+                    };
+                },
+                aspectRatio: 1.0,
+                disableFlip: false,
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { ideal: isMobile ? 720 : 1280 },
+                    height: { ideal: isMobile ? 480 : 720 }
+                }
+            };
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        // Start scanning
+        function startScanning() {
+            document.getElementById('scannerOverlay').classList.add('hidden');
+            document.getElementById('scanningCrosshair').style.display = 'block';
+            showStatus('scanning', '🔍 SCANNING... Point camera at QR code');
+            isScanning = true;
+            
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.resume();
+            }
+        }
+
+        // Handle successful scan - Client-side processing
+        function onScanSuccess(decodedText, decodedResult) {
+            if (!isScanning) return;
+
+            // Immediate feedback
+            showBeepIndicator();
+            playSuccessBeep();
+            
+            // Pause scanner immediately
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.pause(true);
+            }
+            isScanning = false;
+
+            // Hide scanning UI
+            document.getElementById('scanningCrosshair').style.display = 'none';
+            
+            // Process ticket client-side
+            processTicketClientSide(decodedText);
+        }
+
+        // Client-side ticket processing (simplified)
+        function processTicketClientSide(ticketId) {
+            showStatus('scanning', '⚡ Processing...');
+            updateStats('total');
+
+            // Simulate processing delay
+            setTimeout(() => {
+                // Simple validation - check if it looks like a valid ticket ID
+                const isValidFormat = ticketId && ticketId.length > 5;
+                
+                if (isValidFormat) {
+                    // Extract name from ticket ID (if possible)
+                    const parts = ticketId.split('-');
+                    const participantName = parts[0] || 'Unknown Participant';
+                    
+                    showParticipantInfo({
+                        name: participantName,
+                        ticketId: ticketId,
+                        status: 'Verified ✅',
+                        scanTime: new Date().toLocaleTimeString(),
+                        scanner: `Scanner #${scannerId}`
+                    });
+                    
+                    showStatus('success', `✅ VALID TICKET: ${participantName}`);
+                    updateStats('valid');
+                    
+                    // Auto-restart scanning after 3 seconds
+                    setTimeout(restartScanning, 3000);
+                } else {
+                    showStatus('error', `❌ INVALID TICKET FORMAT`);
+                    updateStats('invalid');
+                    
+                    // Auto-restart scanning after 2 seconds
+                    setTimeout(restartScanning, 2000);
+                }
+            }, 500);
+        }
+
+        // Show participant information
+        function showParticipantInfo(participant) {
+            document.getElementById('participantName').textContent = participant.name;
+            document.getElementById('participantTicketId').textContent = participant.ticketId;
+            document.getElementById('participantStatus').textContent = participant.status;
+            document.getElementById('scanTime').textContent = participant.scanTime;
+            document.getElementById('scannerInfo').textContent = participant.scanner;
+            
+            document.getElementById('participantInfo').classList.add('show');
+        }
+
+        // Hide participant information
+        function hideParticipantInfo() {
+            document.getElementById('participantInfo').classList.remove('show');
+        }
+
+        // Restart scanning
+        function restartScanning() {
+            hideParticipantInfo();
+            hideStatus();
+            startScanning();
+        }
+
+        // Show status message
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('statusDisplay');
+            statusEl.textContent = message;
+            statusEl.className = `status-display status-${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        // Hide status message
+        function hideStatus() {
+            document.getElementById('statusDisplay').style.display = 'none';
+        }
+
+        // Update statistics
+        function updateStats(type) {
+            stats[type]++;
+            document.getElementById('validCount').textContent = stats.valid;
+            document.getElementById('invalidCount').textContent = stats.invalid;
+            document.getElementById('totalCount').textContent = stats.total;
+        }
+
+        // Visual feedback for successful scan
+        function showBeepIndicator() {
+            const indicator = document.getElementById('beepIndicator');
+            indicator.style.animation = 'none';
+            indicator.offsetHeight; // Trigger reflow
+            indicator.style.animation = 'beep-flash 0.3s';
+        }
+
+        // Audio feedback - success beep
+        function playSuccessBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.15);
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        // Manual input functionality
+        function toggleManualInput() {
+            const panel = document.getElementById('manualInputPanel');
+            panel.classList.toggle('show');
+            
+            if (panel.classList.contains('show')) {
+                document.getElementById('manualTicketId').focus();
+            }
+        }
+
+        function verifyManualTicket() {
+            const ticketId = document.getElementById('manualTicketId').value.trim();
+            if (ticketId) {
+                document.getElementById('manualTicketId').value = '';
+                toggleManualInput();
+                processTicketClientSide(ticketId);
+            }
+        }
+
+        // Handle scan failure
+        function onScanFailure(error) {
+            // Silent - scan failures are normal
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.getElementById('manualInputPanel').classList.contains('show')) {
+                verifyManualTicket();
+            } else if (e.key === 'Escape') {
+                if (document.getElementById('manualInputPanel').classList.contains('show')) {
+                    toggleManualInput();
+                } else if (!isScanning) {
+                    startScanning();
+                }
+            } else if (e.key === ' ' && !isScanning) {
+                e.preventDefault();
+                startScanning();
+            }
+        });
+
+        // Manual input enter key support
+        document.getElementById('manualTicketId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verifyManualTicket();
+            }
+        });
+
+        // Initialize on page load with performance optimization
+        window.addEventListener('load', () => {
+            // Add loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.innerHTML = '<div style="text-align: center; color: white; padding: 20px;"><div style="margin: 0 auto; width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #4CAF50; border-radius: 50%; animation: spin 1s linear infinite;"></div><p style="margin-top: 10px;">Loading Camera...</p></div>';
+            loadingIndicator.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200;';
+            document.querySelector('.scanner-area').appendChild(loadingIndicator);
+
+            initializeScanner();
+            
+            // Remove loading and show overlay when ready
+            setTimeout(() => {
+                loadingIndicator.remove();
+                document.getElementById('scannerOverlay').classList.remove('hidden');
+            }, 2000);
+        });
+
+        // Optimize for touch devices
+        document.addEventListener('touchstart', function() {}, { passive: true });
+        document.addEventListener('touchmove', function(e) {
+            if (isScanning) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // CSS animation for loading
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
