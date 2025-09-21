@@ -1,0 +1,37 @@
+# GitHub Pages configuration for Robovision Ticket Scanner
+title: "Robovision Ticket Scanner"
+description: "Ultra-fast ticket verification system for events"
+url: "https://miseen.robovision.in"
+baseurl: ""
+
+# Exclude files from GitHub Pages build
+exclude:
+  - node_modules/
+  - package.json
+  - package-lock.json
+  - server.js
+  - routes/
+  - services/
+  - env.example
+  - .gitignore
+  - DEPLOYMENT.md
+
+# Include files that start with underscore
+include:
+  - _config.yml
+
+# Plugin settings
+plugins:
+  - jekyll-relative-links
+
+# Relative links settings
+relative_links:
+  enabled: true
+  collections: true
+
+# Markdown processor
+markdown: kramdown
+highlighter: rouge
+
+# Theme (optional)
+theme: minima

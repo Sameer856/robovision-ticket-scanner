@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎟️ Robovision Ticket Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .logo {
+            height: 60px;
+            margin-bottom: 20px;
+            filter: brightness(0) invert(1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff4081, #3f51b5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .scanner-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .scanner-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }
+
+        .fast-scanner {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+        }
+
+        .regular-scanner {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+        }
+
+        .scanner-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .heart {
+            color: #ff4081;
+            animation: heartbeat 1.5s infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px;
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="logo.png" alt="Robovision" class="logo" onerror="this.style.display='none'">
+        <h1>🎟️ Robovision Scanner</h1>
+        <p>Ultra-fast ticket verification for Thaakra Thaalam '25</p>
+        
+        <div class="scanner-options">
+            <a href="public/fast-scanner.html" class="scanner-btn fast-scanner">
+                ⚡ Ultra-Fast Scanner
+                <br><small>For high-volume scanning (Recommended)</small>
+            </a>
+            
+            <a href="public/index.html" class="scanner-btn regular-scanner">
+                🎯 Standard Scanner
+                <br><small>For detailed verification</small>
+            </a>
+        </div>
+        
+        <div class="footer">
+            Made with <span class="heart">❤️</span> by <strong>Robovision</strong>
+            <br>Powered by robovision.in
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect to fast scanner if accessed with /fast
+        if (window.location.pathname.includes('/fast')) {
+            window.location.href = 'public/fast-scanner.html';
+        }
+        
+        // Preload scanner pages for faster access
+        const link1 = document.createElement('link');
+        link1.rel = 'prefetch';
+        link1.href = 'public/fast-scanner.html';
+        document.head.appendChild(link1);
+        
+        const link2 = document.createElement('link');
+        link2.rel = 'prefetch';
+        link2.href = 'public/index.html';
+        document.head.appendChild(link2);
+    </script>
+</body>
+</html>

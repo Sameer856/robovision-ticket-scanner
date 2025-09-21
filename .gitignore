@@ -55,3 +55,12 @@ temp/
 # Google Sheets credentials
 credentials.json
 service-account-key.json
+
+# GitHub Pages
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Keep public files for static hosting
+!public/
