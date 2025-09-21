@@ -628,29 +628,38 @@
         function initializeScanner() {
             const isMobile = window.innerWidth <= 768;
             const config = {
-                fps: isMobile ? 15 : 30,
+                fps: isMobile ? 10 : 20,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
-                    const minEdgePercentage = 0.6;
+                    const minEdgePercentage = 0.7;
                     const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
                     const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
                     return {
-                        width: Math.min(qrboxSize, isMobile ? 180 : 220),
-                        height: Math.min(qrboxSize, isMobile ? 180 : 220)
+                        width: Math.min(qrboxSize, isMobile ? 200 : 250),
+                        height: Math.min(qrboxSize, isMobile ? 200 : 250)
                     };
                 },
                 aspectRatio: 1.0,
                 disableFlip: false,
                 videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: isMobile ? 720 : 1280 },
-                    height: { ideal: isMobile ? 480 : 720 }
+                    facingMode: "environment"
                 },
                 showTorchButtonIfSupported: false,
-                showZoomSliderIfSupported: false
+                showZoomSliderIfSupported: false,
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
             };
             
+            console.log('🎥 Initializing scanner with config:', config);
             html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            
+            // Hide default HTML5QRCode UI elements after rendering
+            setTimeout(() => {
+                const dashboardSection = document.getElementById('reader__dashboard_section');
+                const cameraSelection = document.getElementById('reader__camera_selection');
+                if (dashboardSection) dashboardSection.style.display = 'none';
+                if (cameraSelection) cameraSelection.style.display = 'none';
+            }, 500);
         }
 
         // Start scanning
@@ -834,12 +843,24 @@
 
         // Initialize on load
         window.addEventListener('load', () => {
-            initializeScanner();
+            // Show loading state first
+            showStatus('scanning', '📱 Loading Camera...');
             
-            // Show ready state after initialization
-            setTimeout(() => {
-                document.getElementById('scannerOverlay').classList.remove('hidden');
-            }, 1000);
+            try {
+                initializeScanner();
+                
+                // Show ready state after initialization
+                setTimeout(() => {
+                    hideStatus();
+                    document.getElementById('scannerOverlay').classList.remove('hidden');
+                }, 2000);
+            } catch (error) {
+                console.error('Scanner initialization failed:', error);
+                showStatus('error', '❌ Camera Access Failed - Check Permissions');
+                setTimeout(() => {
+                    document.getElementById('scannerOverlay').classList.remove('hidden');
+                }, 3000);
+            }
         });
 
         // Touch optimization

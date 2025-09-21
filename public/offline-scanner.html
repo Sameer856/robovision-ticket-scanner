@@ -19,6 +19,7 @@
             overflow: hidden;
             touch-action: manipulation;
             -webkit-text-size-adjust: 100%;
+            height: 100vh;
         }
 
         .scanner-container {
@@ -29,15 +30,30 @@
             flex-direction: column;
         }
 
+        /* Hide default HTML5QRCode UI elements that cause overlap */
+        #reader__dashboard_section {
+            display: none !important;
+        }
+
+        #reader__camera_selection {
+            display: none !important;
+        }
+
+        #reader__scan_region {
+            position: relative !important;
+        }
+
         .header {
             background: linear-gradient(90deg, #ff4081, #3f51b5);
-            padding: 10px 15px;
+            padding: 8px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             flex-shrink: 0;
-            min-height: 60px;
+            height: 65px;
+            z-index: 1000;
+            position: relative;
         }
 
         .header-left {
@@ -85,6 +101,7 @@
             background: #000;
             min-height: 0;
             overflow: hidden;
+            z-index: 1;
         }
 
         #reader {
@@ -554,7 +571,7 @@
         function initializeScanner() {
             const isMobile = window.innerWidth <= 768;
             const config = {
-                fps: isMobile ? 15 : 30,
+                fps: isMobile ? 10 : 20,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdgePercentage = 0.7;
                     const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
@@ -567,12 +584,14 @@
                 aspectRatio: 1.0,
                 disableFlip: false,
                 videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: isMobile ? 720 : 1280 },
-                    height: { ideal: isMobile ? 480 : 720 }
-                }
+                    facingMode: "environment"
+                },
+                showTorchButtonIfSupported: false,
+                showZoomSliderIfSupported: false,
+                rememberLastUsedCamera: true
             };
             
+            console.log('🎥 Initializing offline scanner with config:', config);
             html5QrcodeScanner = new Html5QrcodeScanner("reader", config, false);
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
@@ -783,13 +802,35 @@
             loadingIndicator.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200;';
             document.querySelector('.scanner-area').appendChild(loadingIndicator);
 
-            initializeScanner();
-            
-            // Remove loading and show overlay when ready
-            setTimeout(() => {
-                loadingIndicator.remove();
-                document.getElementById('scannerOverlay').classList.remove('hidden');
-            }, 2000);
+            try {
+                initializeScanner();
+                
+                // Remove loading and show overlay when ready
+                setTimeout(() => {
+                    loadingIndicator.remove();
+                    document.getElementById('scannerOverlay').classList.remove('hidden');
+                    
+                    // Hide any default HTML5QRCode UI elements
+                    setTimeout(() => {
+                        const dashboardSection = document.getElementById('reader__dashboard_section');
+                        const cameraSelection = document.getElementById('reader__camera_selection');
+                        if (dashboardSection) dashboardSection.style.display = 'none';
+                        if (cameraSelection) cameraSelection.style.display = 'none';
+                    }, 500);
+                }, 2000);
+            } catch (error) {
+                console.error('Scanner initialization failed:', error);
+                loadingIndicator.innerHTML = `
+                    <div style="text-align: center; color: #ff4444; padding: 20px;">
+                        <p>❌ Camera Access Failed</p>
+                        <p style="font-size: 0.8rem; margin-top: 10px;">Check camera permissions</p>
+                    </div>
+                `;
+                setTimeout(() => {
+                    loadingIndicator.remove();
+                    document.getElementById('scannerOverlay').classList.remove('hidden');
+                }, 3000);
+            }
         });
 
         // CSS animation for loading
